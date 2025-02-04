@@ -229,6 +229,11 @@ class HotmartScraper(PlatformScraper):
         #     'club': product_subdomain
         # })
 
+        # Inconditionally adds a new HTTP header 'x-product-id' that seems to be required as of January 2025
+        self.scraper.session.headers.update({
+            'x-product-id': f'{int(desired_course["id"])}'
+        })
+
         course_data = None
 
         if not USE_NEW:
@@ -241,10 +246,17 @@ class HotmartScraper(PlatformScraper):
         sorted_modules = sorted(product_info["modules"], key=lambda x: x["moduleOrder"])
         for i, module in enumerate(sorted_modules, start=1):
             module["moduleOrder"] = i
-            sorted_pages = sorted(module["pages"], key=lambda x: x["pageOrder"])
-            for j, page in enumerate(sorted_pages, start=1):
-                page["pageOrder"] = j
-            module["pages"] = sorted_pages
+            try:
+                sorted_pages = sorted(module["pages"], key=lambda x: x["pageOrder"])
+                for j, page in enumerate(module["pages"], start=1):
+                    page["pageOrder"] = j
+                module["pages"] = sorted_pages
+            except KeyError:
+                for j, page in enumerate(module["pages"], start=1):
+                    page["pageOrder"] = j
+            finally:
+                if not module["pages"]:
+                    module["pages"] = []
 
         product_info["modules"] = sorted_modules
         # print('*'*100)
